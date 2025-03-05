@@ -1,0 +1,10 @@
+
+   ---------------------------------Error 时间:2024/7/16 10:27:42---------------------------------
+   导致错误信息 : 文件“E:\software\HPM5300\cdc_acm_hid_msc_freertos\hpm5301evklite_flash_xip\segger_embedded_studio\Output\Debug\Exe\demo.rbl”正由另一进程使用，因此该进程无法访问此文件。
+   导致错误的方法 :System.IO.__Error.WinIOError
+
+   在 System.IO.__Error.WinIOError(Int32 errorCode, String maybeFullPath)
+   在 System.IO.FileStream.Init(String path, FileMode mode, FileAccess access, Int32 rights, Boolean useRights, FileShare share, Int32 bufferSize, FileOptions options, SECURITY_ATTRIBUTES secAttrs, String msgPath, Boolean bFromProxy, Boolean useLongPath, Boolean checkHost)
+   在 System.IO.FileStream..ctor(String path, FileMode mode, FileAccess access, FileShare share, Int32 bufferSize, FileOptions options, String msgPath, Boolean bFromProxy)
+   在 System.IO.FileStream..ctor(String path, FileMode mode)
+   在 rt_ota_packaging_tool.FirmwarePack.btnCreate_Click(Object sender, EventArgs e)

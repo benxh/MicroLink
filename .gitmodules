@@ -1,0 +1,3 @@
+[submodule "MicroLink/external/MicroBoot"]
+	path = MicroLink/external/MicroBoot
+	url = https://github.com/Aladdin-Wang/MicroBoot.git

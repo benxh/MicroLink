@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<iarUserArgVars>
-<group name="HPM_SDK" active="true">
-<variable>
-<name>HPM_SDK_BASE</name>
-<value>E:/software/HPM5300/sdk_env/hpm_sdk/samples/cherryusb/device/composite/cdc_acm_hid_msc_freertos/hpm_sdk_localized_for_hpm5301evklite</value>
-</variable>
-</group>
-</iarUserArgVars>
