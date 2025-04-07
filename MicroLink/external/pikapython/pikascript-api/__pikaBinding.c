@@ -22,6 +22,7 @@
 #include "PikaStdLib_SysObj.h"
 #include "PikaStdData.h"
 #include "PikaStdLib.h"
+#include "RTTView.h"
 #include "builtins.h"
 #include "load.h"
 #include "ym.h"
@@ -277,6 +278,9 @@ PikaObj *New_PikaMain(Args *args){
 #endif
 #ifndef PIKA_MODULE_PIKASTDLIB_DISABLE
     obj_newObj(self, "PikaStdLib", "PikaStdLib", New_PikaStdLib);
+#endif
+#ifndef PIKA_MODULE_RTTVIEW_DISABLE
+    obj_newObj(self, "RTTView", "RTTView", New_RTTView);
 #endif
 #ifndef PIKA_MODULE_BUILTINS_DISABLE
     obj_newObj(self, "builtins", "builtins", New_builtins);
@@ -2937,6 +2941,39 @@ PikaObj *New_PikaStdTask_Task(Args *args){
 
 Arg *PikaStdTask_Task(PikaObj *self){
     return obj_newObjInPackage(New_PikaStdTask_Task);
+}
+#endif
+
+#ifndef PIKA_MODULE_RTTVIEW_DISABLE
+void RTTView_startMethod(PikaObj *self, Args *_args_){
+    PikaTuple* val = args_getTuple(_args_, "val");
+    RTTView_start(self, val);
+}
+method_typedef(
+    RTTView_start,
+    "start", "*val"
+);
+
+void RTTView_stopMethod(PikaObj *self, Args *_args_){
+    PikaTuple* val = args_getTuple(_args_, "val");
+    RTTView_stop(self, val);
+}
+method_typedef(
+    RTTView_stop,
+    "stop", "*val"
+);
+
+class_def(RTTView){
+    __BEFORE_MOETHOD_DEF
+    method_def(RTTView_start, 274811347),
+    method_def(RTTView_stop, 2090736459),
+};
+class_inhert(RTTView, TinyObj);
+
+PikaObj *New_RTTView(Args *args){
+    PikaObj *self = New_TinyObj(args);
+    obj_setClass(self, RTTView);
+    return self;
 }
 #endif
 

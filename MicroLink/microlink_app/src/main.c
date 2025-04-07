@@ -9,40 +9,39 @@
 #include "hpm_dma_mgr.h"
 #include "usb_config.h"
 #include "usb_configuration.h"
-#include "hpm_uart_drv.h"
 #include "dap_main.h"
 #include "usb2uart.h"
 #include "usb2python.h"
 #include "microboot.h"
 #include "ff.h"
-#include "flash_algo.h"
 #include "ymodem_send.h"
 #include "chry_ringbuffer.h"
+#include "SEGGER_RTTView.h"
 
 ATTR_RAMFUNC_WITH_ALIGNMENT(4) 
 static uint8_t s_chBuffer[1024] ;
 static byte_queue_t                  s_tCheckUsePeekQueue;
 static fsm(check_use_peek)           s_fsmCheckUsePeek;
 static check_shell_t                 s_tShellObj;
-#define LED_FLASH_PERIOD_IN_MS 50
+#define LED_FLASH_PERIOD_IN_MS 10
 static volatile uint8_t ledUsbInActivity = 0;
 static volatile uint8_t ledUsbOutActivity = 0;
 static void usb_led_toggle(void);
 
 extern USB_NOCACHE_RAM_SECTION chry_ringbuffer_t g_usbrx;
 extern USB_NOCACHE_RAM_SECTION chry_ringbuffer_t g_uartrx;
+extern USB_NOCACHE_RAM_SECTION chry_ringbuffer_t g_python_usbtx;
 extern ymodem_lib_send_t tYmodemLibSend;
 extern FRESULT flash_mount_fs(void);
+
 int main(void)
 {
-    uint8_t c;
     board_init();
     dma_mgr_init();
     board_init_gpio_pins();
     board_init_led_pins();
     board_init_usb((USB_Type *)CONFIG_HPM_USBD_BASE);
     intc_set_irq_priority(CONFIG_HPM_USBD_IRQn, 2);
-    target_flash_init(0x80000000);
     FRESULT fresult =  flash_mount_fs();
     USB_Configuration();
     uartx_preinit();
@@ -57,7 +56,7 @@ int main(void)
 
     connect(&tUartMsgObj, SIGNAL(uart_sig), &s_tCheckUsePeekQueue, SLOT(enqueue_bytes));    
     connect(&tUartMsgObj, SIGNAL(uart_sig), &g_uartrx, SLOT(chry_ringbuffer_write));  
-
+    connect(&tRTTMsgObj, SIGNAL(rtt_sig), &g_python_usbtx, SLOT(chry_ringbuffer_write)); 
     connect(&tYmodemLibSend.tYmodemSent, SIGNAL(ymodem_send_sig), &g_usbrx, SLOT(chry_ringbuffer_write));   
     connect(&tYmodemLibSend.tYmodemSent, SIGNAL(ymodem_send_sig), &g_uartrx, SLOT(chry_ringbuffer_write));     
      
@@ -110,7 +109,6 @@ static void usb_led_toggle(void)
     }else{
          gpio_write_pin(BOARD_LED2_GPIO_CTRL, BOARD_LED2_GPIO_INDEX, BOARD_LED2_GPIO_PIN,BOARD_LED_OFF_LEVEL);
     }
-
 }
 
 void led_usb_in_activity(void)

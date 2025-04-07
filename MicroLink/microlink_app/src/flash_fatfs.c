@@ -20,11 +20,20 @@ static const TCHAR HTML[] =
 
 
 static const TCHAR VERSION[] =        
-  "V2.0.0 \r\n\
+  "\
+  V2.1.1 \r\n\
+  1.优化RTTView,解决数据溢出问题;\r\n\
+  V2.1.0 \r\n\
+  1.增加RTTView;\r\n\
+  V2.0.1 \r\n\
+  1.修复下载时RST引脚不会拉低电平;\r\n\
+  2.升级完固件自动删除;\r\n\
+  3.为了方便区分串口，通过USB转串口发送数据LED灯闪烁，虚拟串口发送数据LED灯不闪烁;\r\n\
+  V2.0.0 \r\n\
   1.支持SWD/JTAG接口，下载速度超越JLINK V12（时钟10Mhz）;\r\n\
   2.支持USB转串口，最大10M波特率无丢包;\r\n\
   3.支持python脚本，可以通过脚本指定下载算法;\r\n\
-  4.支持U盘拖拽下载;\r\n\
+  4.支持Cortex-M系列U盘拖拽下载;\r\n\
   5.支持U盘离线下载，通过python脚本触发下载;\r\n\
   6.内置ymodem协议栈，通过python脚本触发;\r\n\
   7.支持系统固件升级，为后续添加更多功能;\r\n\
@@ -42,6 +51,8 @@ FRESULT flash_mount_fs(void)
     FRESULT fresult;
     FIL file;
     UINT bw;
+    FILINFO fno;
+    DIR dir;
     // 尝试挂载文件系统
     fresult = f_mount(&s_sd_disk, driver_num_buf, 1);
     
@@ -51,6 +62,16 @@ FRESULT flash_mount_fs(void)
         if (fresult != FR_OK) {
             printf("Failed to change drive, cause: %s\n", show_error_string(fresult));
             return fresult;
+        }
+        // 遍历并删除 MicroLink*.rbl 文件
+        if (f_opendir(&dir, "") == FR_OK) {
+            while (f_readdir(&dir, &fno) == FR_OK && fno.fname[0]) {
+                if (strncmp(fno.fname, "MicroLink", 9) == 0 && strstr(fno.fname, ".rbl")) {
+                    printf("Deleting file: %s\n", fno.fname);
+                    f_unlink(fno.fname);
+                }
+            }
+            f_closedir(&dir);
         }
         // 检查 version.txt 是否存在
         fresult = f_open(&file, "version.txt", FA_READ | FA_OPEN_EXISTING);

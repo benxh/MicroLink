@@ -2,9 +2,12 @@
 #include "usb2msc.h"
 #include "usbd_core.h"
 #include "usbd_msc.h"
-#include "flash_algo.h"
 #include "vfs_manager.h"
 #include "target_board.h"
+#include "board.h"
+#include "hpm_romapi.h"
+
+extern xpi_nor_config_t s_xpi_nor_config;
 extern void led_usb_in_activity(void);
 extern void led_usb_out_activity(void);
 enum {
@@ -71,8 +74,12 @@ void set_volume_label(uint8_t *root_dir, const char *label) {
         if (entry->attr == ATTR_VOLUME_ID) {
             if(strncmp(entry->name, volume_label,11) != 0 ){
                 memcpy(entry->name, volume_label, 11);  // 更新卷标
-                target_flash_erase(USB_CHIP_FLASH_OFFSET +rootDirStartSector*DISK_BLOCK_SIZE,DISK_BLOCK_SIZE);
-                target_flash_write(USB_CHIP_FLASH_OFFSET +rootDirStartSector*DISK_BLOCK_SIZE,root_dir,DISK_BLOCK_SIZE);
+                if (rom_xpi_nor_erase(BOARD_APP_XPI_NOR_XPI_BASE, xpi_xfer_channel_auto, &s_xpi_nor_config,(FAT_ON_CHIP_FLASH_OFFSET + DISK_BLOCK_SIZE*rootDirStartSector), DISK_BLOCK_SIZE) != status_success) {
+                    return;
+                }
+                if (rom_xpi_nor_program(BOARD_APP_XPI_NOR_XPI_BASE, xpi_xfer_channel_auto, &s_xpi_nor_config, (uint32_t *)root_dir, (FAT_ON_CHIP_FLASH_OFFSET + DISK_BLOCK_SIZE*rootDirStartSector), DISK_BLOCK_SIZE) != status_success) {
+                    return;
+                }
                 printf("Updated volume label to: %.11s\n", entry->name);
             }
             return;
@@ -86,8 +93,12 @@ void set_volume_label(uint8_t *root_dir, const char *label) {
             memset(entry, 0, sizeof(FAT16DirEntry));  // 清空旧数据
             memcpy(entry->name, volume_label, 11);   // 设置新卷标
             entry->attr = ATTR_VOLUME_ID;            // 设置卷标属性
-            target_flash_erase(USB_CHIP_FLASH_OFFSET +rootDirStartSector*DISK_BLOCK_SIZE,DISK_BLOCK_SIZE);
-            target_flash_write(USB_CHIP_FLASH_OFFSET +rootDirStartSector*DISK_BLOCK_SIZE,root_dir,DISK_BLOCK_SIZE);
+            if (rom_xpi_nor_erase(BOARD_APP_XPI_NOR_XPI_BASE, xpi_xfer_channel_auto, &s_xpi_nor_config,(FAT_ON_CHIP_FLASH_OFFSET + DISK_BLOCK_SIZE*rootDirStartSector), DISK_BLOCK_SIZE) != status_success) {
+                return;
+            }
+            if (rom_xpi_nor_program(BOARD_APP_XPI_NOR_XPI_BASE, xpi_xfer_channel_auto, &s_xpi_nor_config, (uint32_t *)root_dir, (FAT_ON_CHIP_FLASH_OFFSET + DISK_BLOCK_SIZE*rootDirStartSector), DISK_BLOCK_SIZE) != status_success) {
+                return;
+            }
             printf("Created new volume label: %.11s\n", entry->name);
             return;
         }
@@ -111,8 +122,12 @@ int usbd_msc_sector_read(uint8_t busid, uint8_t lun, uint32_t sector, uint8_t *b
     (void)lun;
     static uint8_t read_root = 0;
     if(sector <= FAT_ON_CHIP_FLASH_BLOCK_NUM){
-      target_flash_read(USB_CHIP_FLASH_OFFSET+sector*DISK_BLOCK_SIZE,buffer,length);
-
+      uint32_t level = disable_global_irq(CSR_MSTATUS_MIE_MASK);
+      if (rom_xpi_nor_read(BOARD_APP_XPI_NOR_XPI_BASE, xpi_xfer_channel_auto, &s_xpi_nor_config, (uint32_t *)buffer, (FAT_ON_CHIP_FLASH_OFFSET + DISK_BLOCK_SIZE*sector), length) != status_success) {
+          restore_global_irq(level);
+          return 0;
+      }
+      restore_global_irq(level);
       if (sector == 0 && read_root == 0) {
           read_root = 1;
         
@@ -121,7 +136,9 @@ int usbd_msc_sector_read(uint8_t busid, uint8_t lun, uint32_t sector, uint8_t *b
           if(boot->bytesPerSector == DISK_BLOCK_SIZE && totalSectors == DISK_BLOCK_NUM){
               rootDirSectors = ((boot->rootEntryCount * 32) + (boot->bytesPerSector - 1)) / boot->bytesPerSector;
               rootDirStartSector = boot->reservedSectors + (boot->numFATs * boot->fatSize16);
-              target_flash_read(USB_CHIP_FLASH_OFFSET+rootDirStartSector*DISK_BLOCK_SIZE,rootDirBuffer,sizeof(rootDirBuffer));  
+              if (rom_xpi_nor_read(BOARD_APP_XPI_NOR_XPI_BASE, xpi_xfer_channel_auto, &s_xpi_nor_config, (uint32_t *)rootDirBuffer, (FAT_ON_CHIP_FLASH_OFFSET + DISK_BLOCK_SIZE*rootDirStartSector), sizeof(rootDirBuffer)) != status_success) {
+                  return 0;
+              }
               set_volume_label(rootDirBuffer,g_board_info.board_vendor);                                      
           } 
           uint32_t dataStartSector = rootDirStartSector + rootDirSectors;
@@ -148,15 +165,26 @@ int usbd_msc_sector_write(uint8_t busid, uint8_t lun, uint32_t sector, uint8_t *
 {
     (void)busid;
     (void)lun;
+    static uint8_t flash_program = 1;
     if(sector <= FAT_ON_CHIP_FLASH_BLOCK_NUM){
-      target_flash_erase(USB_CHIP_FLASH_OFFSET +sector*DISK_BLOCK_SIZE,length);
-      target_flash_write(USB_CHIP_FLASH_OFFSET +sector*DISK_BLOCK_SIZE,buffer,length);
-
-      if (sector >= rootDirStartSector && sector < rootDirStartSector + rootDirSectors) {  
+      uint32_t level = disable_global_irq(CSR_MSTATUS_MIE_MASK);
+      if (rom_xpi_nor_erase(BOARD_APP_XPI_NOR_XPI_BASE, xpi_xfer_channel_auto, &s_xpi_nor_config,(FAT_ON_CHIP_FLASH_OFFSET + DISK_BLOCK_SIZE*sector), length) != status_success) {
+          restore_global_irq(level);
+          flash_program = 0;
+          return 0;
+      }
+      if (rom_xpi_nor_program(BOARD_APP_XPI_NOR_XPI_BASE, xpi_xfer_channel_auto, &s_xpi_nor_config, (uint32_t *)buffer, (FAT_ON_CHIP_FLASH_OFFSET + DISK_BLOCK_SIZE*sector), length) != status_success) {
+          restore_global_irq(level);
+          flash_program = 0;
+          return 0;
+      }
+         
+      if (flash_program == 1 && sector >= rootDirStartSector && sector < rootDirStartSector + rootDirSectors) {  
           transfer_finsh_state(ERROR_SUCCESS_DONE);                                
-      }else if(sector >= rootDirStartSector + rootDirSectors){
+      }else if(flash_program == 1 && sector >= rootDirStartSector + rootDirSectors){
           file_data_handler(sector,buffer,length/DISK_BLOCK_SIZE);
       }
+      restore_global_irq(level);
     }
     return 0;
 }

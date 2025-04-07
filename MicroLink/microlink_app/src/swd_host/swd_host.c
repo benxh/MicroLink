@@ -26,6 +26,7 @@
 #include "DAP_config.h"
 #include "DAP.h"
 #include "swd_host.h"
+
 // Default NVIC and Core debug base addresses
 // TODO: Read these addresses from ROM.
 
@@ -729,7 +730,7 @@ uint8_t swd_flash_syscall_exec(const program_syscall_t *sysCallParam, uint32_t e
 }
 
 // SWD Reset
-static uint8_t swd_reset(void)
+static uint8_t swd_reset(uint32_t count)
 {
     uint8_t tmp_in[8];
     uint8_t i = 0;
@@ -738,7 +739,7 @@ static uint8_t swd_reset(void)
         tmp_in[i] = 0xff;
     }
 
-    SWJ_Sequence(51, tmp_in);
+    SWJ_Sequence(count, tmp_in);
     return 1;
 }
 
@@ -774,24 +775,23 @@ uint8_t JTAG2SWD()
 {
     uint32_t tmp = 0;
 
-    if (!swd_reset()) {
+    if (!swd_reset(51)) {
         return 0;
     }
-
     if (!swd_switch(0xE79E)) {
         return 0;
     }
-
-    if (!swd_reset()) {
+    if (!swd_reset(54)) {
         return 0;
     }
-   
+
     if (!swd_read_idcode(&tmp)) {
         return 0;
     }
 
     return 1;
 }
+
 
 uint8_t swd_init_debug(void)
 {
@@ -811,7 +811,6 @@ uint8_t swd_init_debug(void)
             swd_set_target_reset(1);
             clock_cpu_delay_ms(2);
             swd_set_target_reset(0);
-            clock_cpu_delay_ms(2);
             do_abort = 0;
         }
         swd_init();
@@ -876,7 +875,6 @@ uint8_t swd_init_debug(void)
             do_abort = 1;
             continue;
         }
-
         return 1;
 
     } while (--retries > 0);
@@ -1026,7 +1024,7 @@ uint8_t swd_set_target_state_hw(target_state_t state)
 
     return 1;
 }
-
+#include "stdio.h"
 uint8_t swd_set_target_state_sw(target_state_t state)
 {
     uint32_t val;
@@ -1120,7 +1118,7 @@ uint8_t swd_set_target_state_sw(target_state_t state)
                 return 0;
             }
 
-            clock_cpu_delay_ms(2);
+            clock_cpu_delay_ms(10);
 
             do {
                 if (!swd_read_word(DBG_HCSR, &val)) {

@@ -29,6 +29,7 @@ PikaObj *pikaPythonInit(void){
             "import FLMConfig\n"
             "import load\n"
             "import ym\n"
+            "import RTTView\n"
             "print('hello pikapython!')\n"
             "\n");
 #else 

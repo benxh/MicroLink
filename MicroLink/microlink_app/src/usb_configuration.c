@@ -283,18 +283,14 @@ void usbd_cdc_acm_set_line_coding(uint8_t busid, uint8_t intf, struct cdc_line_c
 {
     (void) busid;
     if(intf == intf2.intf_num){
-      if (memcmp(line_coding, (uint8_t *) &g_cdc_lincoding, sizeof(struct cdc_line_coding)) != 0) {
           memcpy((uint8_t *) &g_cdc_lincoding, line_coding, sizeof(struct cdc_line_coding));
           config_uart = 1;
           config_uart_transfer = 0;
-      }
     }
 
     if(intf == intf4.intf_num){
-      if (memcmp(line_coding, (uint8_t *) &g_cdc1_lincoding, sizeof(struct cdc_line_coding)) != 0) {
           memcpy((uint8_t *) &g_cdc1_lincoding, line_coding, sizeof(struct cdc_line_coding));  
           config_uart_python = 1;
-      }
     }
 
 #ifdef CONFIG_USB485

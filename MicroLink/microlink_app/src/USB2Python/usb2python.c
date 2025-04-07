@@ -5,6 +5,7 @@
 #include "PikaObj.h"
 #include "PikaVM.h"
 #include "ff.h"
+#include "SEGGER_RTTView.h"
 
 USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t cdc1_tmpbuffer[DAP_PACKET_SIZE];
 
@@ -14,7 +15,7 @@ volatile uint8_t config_uart_python = 0;
 volatile uint8_t config_uart_open = 0;
 static PikaObj* pikaMain = NULL;
 
-static USB_NOCACHE_RAM_SECTION chry_ringbuffer_t g_python_usbtx;
+USB_NOCACHE_RAM_SECTION chry_ringbuffer_t g_python_usbtx;
 static USB_NOCACHE_RAM_SECTION chry_ringbuffer_t g_python_usbrx;
 
 static USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t usbtx_ringbuffer[CONFIG_UARTRX_RINGBUF_SIZE];
@@ -36,10 +37,10 @@ int pika_platform_putchar(char ch)
     return 1;
 }
 
+
 static void usbd_cdc_acm_bulk_out(uint8_t busid, uint8_t ep, uint32_t nbytes)
 {
     (void) busid;
-    led_usb_out_activity();
     chry_ringbuffer_write(&g_python_usbrx, cdc1_tmpbuffer, nbytes);
     usbd_ep_start_read(busid, ep, &cdc1_tmpbuffer[0], usbd_get_ep_mps(busid, ep));  
 }
@@ -47,7 +48,6 @@ static void usbd_cdc_acm_bulk_out(uint8_t busid, uint8_t ep, uint32_t nbytes)
 static void usbd_cdc_acm_bulk_in(uint8_t busid, uint8_t ep, uint32_t nbytes)
 {
     (void) busid;
-    led_usb_in_activity();
     chry_ringbuffer_linear_read_done(&g_python_usbtx, nbytes);
     if ((nbytes % usbd_get_ep_mps(busid, ep)) == 0 && nbytes) {
         /* send zlp */
@@ -76,28 +76,32 @@ void pika_script_Init(void)
     }
 }
 
+
 void chry_dap_pikapython_handle(void)
 {
     uint8_t *buffer;
     uint32_t size;
     uint8_t ch ;
-    static uint32_t delay_count = 20000;
+    static uint32_t delay_count = 50000;
     if(config_uart_python){
         if(delay_count != 0){
             delay_count--;
-            return;
         }
-        config_uart_open = 1;
-        if (chry_ringbuffer_get_used(&g_python_usbtx) && ep_tx_busy_flag == false) {
-            ep_tx_busy_flag = true;
-            buffer = chry_ringbuffer_linear_read_setup(&g_python_usbtx,&size);
-            usbd_ep_start_write(0, CDC_IN_EP1, buffer, size);
-        }
+        if(delay_count == 0){
+            config_uart_open = 1;
+            if (chry_ringbuffer_get_used(&g_python_usbtx) && ep_tx_busy_flag == false) {
+                ep_tx_busy_flag = true;
+                buffer = chry_ringbuffer_linear_read_setup(&g_python_usbtx,&size);
+                usbd_ep_start_write(0, CDC_IN_EP1, buffer, size);
+            }
 
-        if (chry_ringbuffer_get_used(&g_python_usbrx)) {
-            chry_ringbuffer_read_byte(&g_python_usbrx,&ch);
-            if(pikaMain != NULL){
-                obj_runChar(pikaMain, ch);
+            if (chry_ringbuffer_get_used(&g_python_usbrx)) {
+                chry_ringbuffer_read_byte(&g_python_usbrx,&ch);
+                if(receive_usb_and_write_rtt(ch) == 0){            
+                    if(pikaMain != NULL){
+                        obj_runChar(pikaMain, ch);
+                    }
+                }
             }
         }
     }

@@ -54,15 +54,15 @@ uint8_t validate_bin_nvic_base(const uint8_t *buf)
     uint32_t i = 4, nvic_val = 0;
     uint8_t in_range = 0;
     // test the initial SP value
-    memcpy(&nvic_val, buf + 0, sizeof(nvic_val));
-    //printf("nvic_val = 0x%x\n",nvic_val);
-    if (1 == test_range(nvic_val, 0x1FFF8000, 0x24080000)) {
-        in_range = 1;
-    }
+    //memcpy(&nvic_val, buf + 0, sizeof(nvic_val));
+    ////printf("nvic_val = 0x%x\n",nvic_val);
+    //if (1 == test_range(nvic_val, 0x1FFF8000, 0x24080000)) {
+    //    in_range = 1;
+    //}
 
-    if (in_range == 0) {
-        return 0;
-    }
+    //if (in_range == 0) {
+    //    return 0;
+    //}
     uint32_t nvic_val_base = (get_bin_start_address() & 0XFF000000);
     // Reset_Handler
     // NMI_Handler

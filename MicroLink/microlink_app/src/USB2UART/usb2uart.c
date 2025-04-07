@@ -98,7 +98,10 @@ void uart_isr(void)
             }
         }
     }
-
+    if (uart_is_txline_idle(UART_BASE)) {
+        uart_clear_txline_idle_flag(UART_BASE);
+        gpio_write_pin(BOARD_EN_GPIO_CTRL, BOARD_EN_GPIO_INDEX, BOARD_EN_GPIO_PIN, 0);
+    }
 }
 
 
@@ -170,7 +173,13 @@ static void chry_dap_usb2uart_uart_config_callback(struct cdc_line_coding *line_
     config.rxidle_config.idle_cond = uart_rxline_idle_cond_state_machine_idle;
     config.rxidle_config.threshold = 30U; /* 20bit */
 
+    config.txidle_config.detect_enable = true;
+    config.txidle_config.detect_irq_enable  = true;
+    config.txidle_config.idle_cond = uart_rxline_idle_cond_state_machine_idle;
+    config.txidle_config.threshold = 3U;
+
     uart_init(UART_BASE, &config);
+    uart_init_txline_idle_detection(UART_BASE, config.txidle_config);
     uart_clear_rxline_idle_flag(UART_BASE);
     uart_clear_txline_idle_flag(UART_BASE);
     uart_reset_rx_fifo(UART_BASE);
@@ -185,6 +194,7 @@ static void chry_dap_usb2uart_uart_send_bydma(uint8_t *data, uint16_t len)
     if (len <= 0) {
         return;
     }
+    gpio_write_pin(BOARD_EN_GPIO_CTRL, BOARD_EN_GPIO_INDEX, BOARD_EN_GPIO_PIN, 1);
     g_uart_tx_transfer_length = len;
     buf_addr = core_local_mem_to_sys_address(HPM_CORE0, (uint32_t)data);
     dma_mgr_set_chn_src_addr(tx_resource, buf_addr);

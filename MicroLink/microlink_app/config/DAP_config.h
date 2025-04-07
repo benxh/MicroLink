@@ -87,7 +87,7 @@ This information includes:
 /// Default communication speed on the Debug Access Port for SWD and JTAG mode.
 /// Used to initialize the default SWD/JTAG clock frequency.
 /// The command \ref DAP_SWJ_Clock can be used to overwrite this default setting.
-#define DAP_DEFAULT_SWJ_CLOCK   10000000U        ///< Default SWD/JTAG clock frequency in Hz.
+#define DAP_DEFAULT_SWJ_CLOCK   5000000U        ///< Default SWD/JTAG clock frequency in Hz.
 
 /// Maximum Package Size for Command and Response data.
 /// This configuration settings is used to optimize the communication performance with the
@@ -403,7 +403,14 @@ __STATIC_INLINE void PORT_JTAG_SETUP (void) {
     HPM_IOC->PAD[PIN_TCK].PAD_CTL = IOC_PAD_PAD_CTL_HYS_SET(1) | IOC_PAD_PAD_CTL_PRS_SET(2) | IOC_PAD_PAD_CTL_PE_SET(1) | IOC_PAD_PAD_CTL_PS_SET(1)  | IOC_PAD_PAD_CTL_SR_SET(1) | IOC_PAD_PAD_CTL_SPD_SET(3)| IOC_PAD_PAD_CTL_DS_SET(0);
     HPM_IOC->PAD[PIN_TMS].PAD_CTL = IOC_PAD_PAD_CTL_HYS_SET(1) | IOC_PAD_PAD_CTL_PRS_SET(2) | IOC_PAD_PAD_CTL_PE_SET(1) | IOC_PAD_PAD_CTL_PS_SET(1)   | IOC_PAD_PAD_CTL_SR_SET(1)| IOC_PAD_PAD_CTL_SPD_SET(3)| IOC_PAD_PAD_CTL_DS_SET(0);
     HPM_IOC->PAD[PIN_TDI].PAD_CTL = IOC_PAD_PAD_CTL_HYS_SET(1) | IOC_PAD_PAD_CTL_PRS_SET(2) | IOC_PAD_PAD_CTL_PE_SET(1) | IOC_PAD_PAD_CTL_PS_SET(1)| IOC_PAD_PAD_CTL_SPD_SET(3)| IOC_PAD_PAD_CTL_DS_SET(0);
-    HPM_IOC->PAD[PIN_nRESET].PAD_CTL =  IOC_PAD_PAD_CTL_PRS_SET(2) | IOC_PAD_PAD_CTL_PE_SET(1) | IOC_PAD_PAD_CTL_PS_SET(1) | IOC_PAD_PAD_CTL_SR_SET(1) | IOC_PAD_PAD_CTL_SPD_SET(3);
+    HPM_IOC->PAD[PIN_nRESET].PAD_CTL =  IOC_PAD_PAD_CTL_PRS_SET(2) | IOC_PAD_PAD_CTL_PE_SET(1) | IOC_PAD_PAD_CTL_PS_SET(1) | IOC_PAD_PAD_CTL_SR_SET(1) | IOC_PAD_PAD_CTL_SPD_SET(3)| IOC_PAD_PAD_CTL_DS_SET(0);
+     gpio_write_pin(PIN_GPIO, PIN_PORT, PIN_nRESET_NUM, false);
+     clock_cpu_delay_us(100);
+     gpio_write_pin(PIN_GPIO, PIN_PORT, PIN_nRESET_NUM, true);
+     clock_cpu_delay_us(100);
+     gpio_write_pin(PIN_GPIO, PIN_PORT, PIN_nRESET_NUM, false);
+     clock_cpu_delay_us(100);
+     gpio_write_pin(PIN_GPIO, PIN_PORT, PIN_nRESET_NUM, true);
 }
 
 /** Setup SWD I/O pins: SWCLK, SWDIO, and nRESET.
@@ -430,7 +437,15 @@ __STATIC_INLINE void PORT_SWD_SETUP (void) {
     gpio_set_pin_output_with_initial(PIN_GPIO, PIN_PORT, PIN_nRESET_NUM, true);
     HPM_IOC->PAD[PIN_TCK].PAD_CTL = IOC_PAD_PAD_CTL_HYS_SET(1) | IOC_PAD_PAD_CTL_PRS_SET(2) | IOC_PAD_PAD_CTL_PE_SET(1) | IOC_PAD_PAD_CTL_PS_SET(1) | IOC_PAD_PAD_CTL_SR_SET(1) | IOC_PAD_PAD_CTL_SPD_SET(3)| IOC_PAD_PAD_CTL_DS_SET(0);
     HPM_IOC->PAD[PIN_TMS].PAD_CTL = IOC_PAD_PAD_CTL_HYS_SET(1) | IOC_PAD_PAD_CTL_PRS_SET(2) | IOC_PAD_PAD_CTL_PE_SET(1) | IOC_PAD_PAD_CTL_PS_SET(1) | IOC_PAD_PAD_CTL_SR_SET(1) | IOC_PAD_PAD_CTL_SPD_SET(3)| IOC_PAD_PAD_CTL_DS_SET(0);
-    HPM_IOC->PAD[PIN_nRESET].PAD_CTL = IOC_PAD_PAD_CTL_PRS_SET(2) | IOC_PAD_PAD_CTL_PE_SET(1) | IOC_PAD_PAD_CTL_PS_SET(1) | IOC_PAD_PAD_CTL_SPD_SET(3);
+    HPM_IOC->PAD[PIN_nRESET].PAD_CTL = IOC_PAD_PAD_CTL_PRS_SET(2) | IOC_PAD_PAD_CTL_PE_SET(1) | IOC_PAD_PAD_CTL_PS_SET(1) | IOC_PAD_PAD_CTL_SPD_SET(3)| IOC_PAD_PAD_CTL_DS_SET(0);
+
+     gpio_write_pin(PIN_GPIO, PIN_PORT, PIN_nRESET_NUM, false);
+     clock_cpu_delay_us(100);
+     gpio_write_pin(PIN_GPIO, PIN_PORT, PIN_nRESET_NUM, true);
+     clock_cpu_delay_us(100);
+     gpio_write_pin(PIN_GPIO, PIN_PORT, PIN_nRESET_NUM, false);
+     clock_cpu_delay_us(100);
+     gpio_write_pin(PIN_GPIO, PIN_PORT, PIN_nRESET_NUM, true);
 }
 
 /** Disable JTAG/SWD I/O Pins.
@@ -777,7 +792,10 @@ __STATIC_INLINE uint8_t RESET_TARGET (void) {
   PIN_nRESET_OUT(0);
   clock_cpu_delay_us(100);
   PIN_nRESET_OUT(1);
-
+  clock_cpu_delay_us(100);
+  PIN_nRESET_OUT(0);
+  clock_cpu_delay_us(100);
+  PIN_nRESET_OUT(1);
   return (1U);             // change to '1' when a device reset sequence is implemented
 }
 

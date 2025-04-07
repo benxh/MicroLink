@@ -270,10 +270,7 @@ void board_timer_create(uint32_t ms, board_timer_cb cb)
 
 void board_init_gpio_pins(void)
 {
-    HPM_IOC->PAD[IOC_PAD_PA08].FUNC_CTL = IOC_PA08_FUNC_CTL_GPIO_A_08;
-    gpiom_set_pin_controller(HPM_GPIOM, GPIOM_ASSIGN_GPIOA, 8, gpiom_soc_gpio0);
-    gpio_set_pin_output(HPM_GPIO0, GPIO_OE_GPIOA, 8);
-    gpio_write_pin(HPM_GPIO0, GPIO_DO_GPIOA, 8, 1);
+    gpio_set_pin_output_with_initial(BOARD_EN_GPIO_CTRL, BOARD_EN_GPIO_INDEX, BOARD_EN_GPIO_PIN, 0);
 }
 
 void board_init_led_pins(void)

@@ -31,7 +31,7 @@ typedef struct  {
 typedef struct  {
     program_target_t target;
     uint32_t sector_info_length;
-    uint32_t prog_blob[4096];
+    uint32_t prog_blob[4096 * 5];
 }flash_blob_t;
 
 extern flash_blob_t tFlashBlob;

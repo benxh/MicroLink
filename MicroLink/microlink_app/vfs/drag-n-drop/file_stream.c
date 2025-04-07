@@ -11,6 +11,10 @@
 #include "board.h"
 #include "hpm_ppor_drv.h"
 #include "swd_host.h"
+#include "board.h"
+#include "hpm_romapi.h"
+
+extern xpi_nor_config_t s_xpi_nor_config;
 
 #undef this
 #define this        (*ptThis)
@@ -216,7 +220,7 @@ uint32_t get_bin_start_address(void)
 {
     return load_bin_start_address;
 }
-
+#include "pikaScript.h"
 error_t write_bin(void *state, uint32_t sector,const uint8_t *data, uint32_t size)
 {
     error_t status;
@@ -258,11 +262,12 @@ error_t write_bin(void *state, uint32_t sector,const uint8_t *data, uint32_t siz
         }else{
             bin_state->flash_addr = start_addr;
         }
-        printf(" start_addr = 0x%x,flash_addr = 0x%x\r\n",start_addr,bin_state->flash_addr);
+       // printf(" start_addr = 0x%x,flash_addr = 0x%x\r\n",start_addr,bin_state->flash_addr);
         // Pass on data to the decoder
         status = flash_decoder_write(bin_state->flash_addr, bin_state->vector_buf, bin_state->buf_pos);
 
         if (ERROR_SUCCESS != status) {
+            printf("flash_addr = 0x%x,status = %d\r\n",bin_state->flash_addr,status);
             return status;
         }
 
@@ -273,6 +278,7 @@ error_t write_bin(void *state, uint32_t sector,const uint8_t *data, uint32_t siz
     status = flash_decoder_write(bin_state->flash_addr, data, size);
 
     if (ERROR_SUCCESS != status) {
+        printf("flash_addr = 0x%x,status = %d\r\n",bin_state->flash_addr,status);
         return status;
     }
 
@@ -420,9 +426,17 @@ static error_t close_rbl(void *state)
 void enter_bootloader(uint8_t *pchDate, uint16_t hwLength)
 {
     uint32_t wData = 0;
-    target_flash_erase((APP_PART_ADDR + APP_PART_SIZE - (3*MARK_SIZE) - (USER_DATA_SIZE)),  USER_DATA_SIZE);
-    target_flash_write((APP_PART_ADDR + APP_PART_SIZE - (3*MARK_SIZE) - (USER_DATA_SIZE)), pchDate, USER_DATA_SIZE);
-    target_flash_write((APP_PART_ADDR + APP_PART_SIZE - MARK_SIZE), (const uint8_t *)&wData,  sizeof(wData));
+
+    if (rom_xpi_nor_erase(BOARD_APP_XPI_NOR_XPI_BASE, xpi_xfer_channel_auto, &s_xpi_nor_config,(FAT_ON_CHIP_FLASH_OFFSET + (APP_PART_ADDR + APP_PART_SIZE - (3*MARK_SIZE) - (USER_DATA_SIZE))  - 0x80000000 ), USER_DATA_SIZE) != status_success) {
+        return;
+    }
+    if (rom_xpi_nor_program(BOARD_APP_XPI_NOR_XPI_BASE, xpi_xfer_channel_auto, &s_xpi_nor_config, (uint32_t *)pchDate, (APP_PART_ADDR + APP_PART_SIZE - (3*MARK_SIZE) - (USER_DATA_SIZE) - 0x80000000), USER_DATA_SIZE) != status_success) {
+        return;
+    }
+
+    if (rom_xpi_nor_program(BOARD_APP_XPI_NOR_XPI_BASE, xpi_xfer_channel_auto, &s_xpi_nor_config, (uint32_t *)&wData, (APP_PART_ADDR + APP_PART_SIZE - MARK_SIZE - 0x80000000), sizeof(wData)) != status_success) {
+        return;
+    }
     ppor_sw_reset(HPM_PPOR, 5000);
 }
 
