@@ -3,7 +3,7 @@
 #include "diskio.h"
 #include "board.h"
 
-static xpi_nor_config_t s_xpi_nor_config;
+xpi_nor_config_t s_xpi_nor_config;
 static uint32_t flash_size;
 static uint32_t sector_size;
 static uint32_t page_size;
