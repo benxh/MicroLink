@@ -2,6 +2,11 @@
 #ifndef __WL_CFG_H__
 #define __WL_CFG_H__
 
+#ifdef USE_UART_TTL
+# define ENABLE_UART_TTL_UART1
+# define CONFIG_USB485
+#endif
+
 // <<< Use Configuration Wizard in Context Menu >>>
 
 // <h>Log Configuration

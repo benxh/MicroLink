@@ -24,7 +24,7 @@ define block tbss                           { section .tbss,      section .tbss.
 define block tdata                          { section .tdata,     section .tdata.* };
 define block tls   with fixed order         { block tbss, block tdata };
 define block tdata_load                     { copy of block tdata };
-define block heap  with size = /*__HEAPSIZE__*/14000,  alignment = 8, /* fill =0x00, */ readwrite access { };
+define block heap  with size = __HEAPSIZE__,  alignment = 8, /* fill =0x00, */ readwrite access { };
 define block stack with size = __STACKSIZE__, alignment = 16, /* fill =0xCD, */ readwrite access { };
 define block cherryusb_usbh_class_info with alignment = 8    { section .usbh_class_info };
 define block framebuffer with alignment = 8                  { section .framebuffer, section .framebuffer.* };

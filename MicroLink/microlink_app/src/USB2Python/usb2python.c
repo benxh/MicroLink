@@ -26,12 +26,12 @@ extern void led_usb_in_activity(void);
 extern void led_usb_out_activity(void);
 int pika_platform_putchar(char ch) 
 {
-    if(config_uart_open && pikaMain != NULL){
+    if (config_uart_open && pikaMain != NULL) {
         while (ep_tx_busy_flag);
         usbd_ep_start_write(0, CDC_IN_EP1, (const uint8_t *)&ch, 1);
         ep_tx_busy_flag = true;
         while (ep_tx_busy_flag);
-    }else{
+    } else {
         chry_ringbuffer_write(&g_python_usbtx, &ch, 1);
     }
     return 1;
@@ -83,11 +83,11 @@ void chry_dap_pikapython_handle(void)
     uint32_t size;
     uint8_t ch ;
     static uint32_t delay_count = 50000;
-    if(config_uart_python){
-        if(delay_count != 0){
+    if (config_uart_python) {
+        if (delay_count != 0) {
             delay_count--;
         }
-        if(delay_count == 0){
+        if (delay_count == 0) {
             config_uart_open = 1;
             if (chry_ringbuffer_get_used(&g_python_usbtx) && ep_tx_busy_flag == false) {
                 ep_tx_busy_flag = true;
@@ -97,13 +97,16 @@ void chry_dap_pikapython_handle(void)
 
             if (chry_ringbuffer_get_used(&g_python_usbrx)) {
                 chry_ringbuffer_read_byte(&g_python_usbrx,&ch);
-                if(receive_usb_and_write_rtt(ch) == 0){            
-                    if(pikaMain != NULL){
+                if (receive_usb_and_write_rtt(ch) == 0) {            
+                    if (pikaMain != NULL) {
                         obj_runChar(pikaMain, ch);
                     }
                 }
             }
         }
+    } else {
+      config_uart_open = 0;
+      delay_count = 50000;
     }
 }
 

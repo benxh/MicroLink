@@ -21,7 +21,7 @@ static const TCHAR HTML[] =
 
 static const TCHAR VERSION[] =        
   "\
-  V2.1.1 \r\n\
+  V2.1.2 \r\n\
   1.优化RTTView,解决数据溢出问题;\r\n\
   V2.1.0 \r\n\
   1.增加RTTView;\r\n\

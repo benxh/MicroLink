@@ -43,7 +43,6 @@ This information includes:
  - Debug Access Port supported modes and settings (JTAG/SWD and SWO).
  - Optional information about a connected Target Device (for Evaluation Boards).
 */
-
 #include "stdint.h"                             
 
 #ifndef   __STATIC_INLINE
@@ -314,16 +313,30 @@ NRESET--IO   PA31
 #define PIN_GPIOM_BASE                  HPM_GPIOM
 #define PIN_GPIO                        HPM_FGPIO
 #define PIN_PORT                        GPIO_OE_GPIOA
+#if defined(USE_UART_TTL) && (USE_UART_TTL == 1)
+#define PIN_TCK                         IOC_PAD_PA04 // IOC_PAD_PA06
+#define PIN_TMS                         IOC_PAD_PA05 // IOC_PAD_PA07
+#define PIN_TDI                         IOC_PAD_PA10 // IOC_PAD_PA05
+#define PIN_TDO                         IOC_PAD_PA09 // IOC_PAD_PA04
+#else
 #define PIN_TCK                         IOC_PAD_PA06
 #define PIN_TMS                         IOC_PAD_PA07
 #define PIN_TDI                         IOC_PAD_PA05
 #define PIN_TDO                         IOC_PAD_PA04
+#endif
 #define PIN_nRESET                      IOC_PAD_PA08
 
+#if defined(USE_UART_TTL) && (USE_UART_TTL == 1)
+#define PIN_TCK_NUM      4  // 6
+#define PIN_TMS_NUM      5  // 7
+#define PIN_TDI_NUM      10 // 5
+#define PIN_TDO_NUM      9  // 4
+#else
 #define PIN_TCK_NUM      6
 #define PIN_TMS_NUM      7
 #define PIN_TDI_NUM      5
 #define PIN_TDO_NUM      4
+#endif
 #define PIN_nRESET_NUM   8
 #endif
 

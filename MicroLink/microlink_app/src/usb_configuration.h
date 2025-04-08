@@ -35,8 +35,15 @@
 #define CDC_INT_EP4 0x8E
 
 
-#define USBD_VID           0x34B7//0x0D28
-#define USBD_PID           0xFFFF//0x0204
+// PID    | 说明
+// -------+--------------------------------------
+// 0x0204 | DAPLink-CMSIS-DAP(只调试器)
+// 0x0200 | DAPLink-通常包含 MSD/UART/CDC 等功能
+// 0x0201 | DAPLink-无 MSD，仅有DAP和串口
+// 0x0202 | DAPLink-带CMSIS-DAPv2功能
+// 0x0203 | DAPLink-仅串口和DAP，无MSD
+#define USBD_VID           0x0D28 // 0x34B7//0x0D28
+#define USBD_PID           0x0202 // 0xFFFF//0x0204
 #define USBD_MAX_POWER     500
 #define USBD_LANGID_STRING 1033
 
@@ -115,8 +122,8 @@ extern struct usbd_endpoint cdc_out_ep;
 extern struct usbd_endpoint cdc_in_ep;
 extern struct usbd_endpoint cdc_out_ep1;
 extern struct usbd_endpoint cdc_in_ep1;
-extern struct usbd_endpoint cdc_out_ep2;
-extern struct usbd_endpoint cdc_in_ep2;
+extern struct usbd_endpoint cdc_out_ep2_uart_ttl;
+extern struct usbd_endpoint cdc_in_ep2_uart_ttl;
 
 /**
  * @brief 本工程的USB配置函数，用于添加其它配置

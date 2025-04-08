@@ -19,7 +19,7 @@ rtt_data_msg_t  tRTTMsgObj;
 extern int64_t get_system_time_ms(void);
 
 static SEGGER_RTT_CB _SEGGER_RTT;
-uint32_t RTT_wAddr,RTT_wSize,RTT_wChannel;
+uint32_t RTT_wAddr, RTT_wSize, RTT_wChannel;
 // 读取 RTT UpBuffer 并转发
 void read_rtt_and_send_usb(void)
 {
@@ -32,7 +32,7 @@ void read_rtt_and_send_usb(void)
 
     if (segger_rtt_addr != 0) {
         if(stat == 0) {
-            if(read_err_count > 2) {
+            if (read_err_count > 2) {
                 read_err_count = 0;
                 RTTView_init(RTT_wAddr, RTT_wSize);
             }
@@ -218,14 +218,14 @@ void RTTView_Uninit(void)
 void RTTView_start(PikaObj *self, PikaTuple* val)
 {
     int val_num = pikaTuple_getSize(val);
-    if(val_num == 2){
+    if (val_num == 2) {
       Arg* arg = pikaTuple_getArg(val, 0);
       RTT_wAddr = (int)arg_getInt(arg);
       arg = pikaTuple_getArg(val, 1);
       RTT_wSize = (int)arg_getInt(arg);
       RTT_wChannel = 0;
     }
-    if(val_num == 3){
+    if (val_num == 3) {
       Arg* arg = pikaTuple_getArg(val, 0);
       RTT_wAddr = (int)arg_getInt(arg);
       arg = pikaTuple_getArg(val, 1);
@@ -234,7 +234,7 @@ void RTTView_start(PikaObj *self, PikaTuple* val)
       RTT_wChannel = (int)arg_getInt(arg);
     }
     pika_platform_printf("Addr = 0x%x,wSize = %d,Channel = %d\n",RTT_wAddr,RTT_wSize,RTT_wChannel);
-    RTTView_init(RTT_wAddr,RTT_wSize);
+    RTTView_init(RTT_wAddr, RTT_wSize);
 }
 
 

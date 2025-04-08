@@ -11,6 +11,9 @@
 #include "usb_configuration.h"
 #include "dap_main.h"
 #include "usb2uart.h"
+#ifdef USE_UART_TTL
+#include "usb2uart_ttl.h"
+#endif
 #include "usb2python.h"
 #include "microboot.h"
 #include "ff.h"
@@ -34,6 +37,10 @@ extern USB_NOCACHE_RAM_SECTION chry_ringbuffer_t g_python_usbtx;
 extern ymodem_lib_send_t tYmodemLibSend;
 extern FRESULT flash_mount_fs(void);
 
+#ifdef USE_UART_TTL
+extern USB_NOCACHE_RAM_SECTION chry_ringbuffer_t  g_uartrx_uart_ttl;
+#endif
+
 int main(void)
 {
     board_init();
@@ -45,6 +52,9 @@ int main(void)
     FRESULT fresult =  flash_mount_fs();
     USB_Configuration();
     uartx_preinit();
+#ifdef USE_UART_TTL
+    uartx_preinit_uart_ttl(); // uart-ttl
+#endif
     if(fresult == FR_OK){
         pika_script_Init();
     }
@@ -59,11 +69,23 @@ int main(void)
     connect(&tRTTMsgObj, SIGNAL(rtt_sig), &g_python_usbtx, SLOT(chry_ringbuffer_write)); 
     connect(&tYmodemLibSend.tYmodemSent, SIGNAL(ymodem_send_sig), &g_usbrx, SLOT(chry_ringbuffer_write));   
     connect(&tYmodemLibSend.tYmodemSent, SIGNAL(ymodem_send_sig), &g_uartrx, SLOT(chry_ringbuffer_write));     
+
+#ifdef USE_UART_TTL
+    //connect(&tUartMsgObj_uart_ttl, SIGNAL(uart_ttl_rx), &s_tCheckUsePeekQueue_uart_ttl, SLOT(enqueue_bytes)); // uart-ttl
+    //connect(&tUartMsgObj_uart_ttl, SIGNAL(uart_ttl_rx), &s_tCheckUsePeekQueue, SLOT(enqueue_bytes)); // uart-485
+    connect(&tUartMsgObj_uart_ttl, SIGNAL(uart_ttl_rx), &g_uartrx_uart_ttl, SLOT(chry_ringbuffer_write)); // uart-ttl
+#endif
      
     while(1) {
         chry_dap_handle();
         chry_dap_usb2uart_handle();
+#ifdef USE_UART_TTL
+        chry_dap_usb2uart_handle_uart_ttl();
+#endif
         usb2uart_handler();
+#ifdef USE_UART_TTL
+        usb2uart_handler_uart_ttl(); // uart-ttl
+#endif
         chry_dap_pikapython_handle();
         call_fsm( check_use_peek,  &s_fsmCheckUsePeek );
     }

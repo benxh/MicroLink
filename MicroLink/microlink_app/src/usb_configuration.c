@@ -1,7 +1,11 @@
+#include "user_app_cfg.h"
 #include "usb_configuration.h"
 #include "usbd_core.h"
 #include "dap_main.h"
 #include "usb2uart.h"
+#if defined(USE_UART_TTL) && (USE_UART_TTL > 0)
+#include "usb2uart_ttl.h"
+#endif
 #include "usb2msc.h"
 #include "usb2python.h"
 
@@ -28,8 +32,10 @@ static const uint8_t config_descriptor[] = {
 #endif
         CDC_ACM_DESCRIPTOR_INIT(MSC_INTF_NUM + 1, CDC_INT_EP, CDC_OUT_EP, CDC_IN_EP, DAP_PACKET_SIZE, 0x00),
         CDC_ACM_DESCRIPTOR_INIT(MSC_INTF_NUM + 3, CDC_INT_EP1, CDC_OUT_EP1, CDC_IN_EP1, DAP_PACKET_SIZE, 0x00),
-#ifdef CONFIG_USB485
+#if defined(USE_UART_TTL) && (USE_UART_TTL > 0)
+# ifdef CONFIG_USB485
         CDC_ACM_DESCRIPTOR_INIT(MSC_INTF_NUM + 5, CDC_INT_EP2, CDC_OUT_EP2, CDC_IN_EP2, DAP_PACKET_SIZE, 0x00),
+# endif
 #endif
 #ifdef CONFIG_SLCAN0
         CDC_ACM_DESCRIPTOR_INIT(MSC_INTF_NUM + 7, CDC_INT_EP3, CDC_OUT_EP3, CDC_IN_EP3, DAP_PACKET_SIZE, 0x00),
@@ -52,8 +58,10 @@ static const uint8_t other_speed_config_descriptor[] = {
 #endif
         CDC_ACM_DESCRIPTOR_INIT(MSC_INTF_NUM + 1, CDC_INT_EP, CDC_OUT_EP, CDC_IN_EP, DAP_PACKET_SIZE, 0x00),
         CDC_ACM_DESCRIPTOR_INIT(MSC_INTF_NUM + 3, CDC_INT_EP1, CDC_OUT_EP1, CDC_IN_EP1, DAP_PACKET_SIZE, 0x00),
-#ifdef CONFIG_USB485
+#if defined(USE_UART_TTL) && (USE_UART_TTL > 0)
+# ifdef CONFIG_USB485
         CDC_ACM_DESCRIPTOR_INIT(MSC_INTF_NUM + 5, CDC_INT_EP2, CDC_OUT_EP2, CDC_IN_EP2, DAP_PACKET_SIZE, 0x00),
+# endif
 #endif
 #ifdef CONFIG_SLCAN0
         CDC_ACM_DESCRIPTOR_INIT(MSC_INTF_NUM + 7, CDC_INT_EP3, CDC_OUT_EP3, CDC_IN_EP3, DAP_PACKET_SIZE, 0x00),
@@ -230,29 +238,42 @@ void usbd_event_handler(uint8_t busid, uint8_t event)
     (void) busid;
     switch (event) {
         case USBD_EVENT_RESET:
+            printf("\033[31mUSBD_EVENT_RESET: busid=%d\033[0m\r\n", busid);
             usbrx_idle_flag = 0;
             usbtx_idle_flag = 0;
             uarttx_idle_flag = 0;
             config_uart_transfer = 0;
+            config_uart_python = 0;
+            usbrx_idle_flag_uart_ttl = 0;
+            usbtx_idle_flag_uart_ttl = 0;
+            uarttx_idle_flag_uart_ttl = 0;
+            config_uart_uart_ttl = 0;
             break;
         case USBD_EVENT_CONNECTED:
+            printf("\033[32mUSBD_EVENT_CONNECTED: busid=%d\033[0m\r\n", busid);
             break;
         case USBD_EVENT_DISCONNECTED:
+            printf("\033[31mUSBD_EVENT_DISCONNECTED: busid=%d\033[0m\r\n", busid);
             break;
         case USBD_EVENT_RESUME:
+            printf("\033[32USBD_EVENT_RESUME: busid=%d\033[0m\r\n", busid);
             break;
         case USBD_EVENT_SUSPEND:
+            printf("\033[31mUSBD_EVENT_SUSPEND: busid=%d\033[0m\r\n", busid);
             break;
         case USBD_EVENT_CONFIGURED:
+            printf("\033[32mUSBD_EVENT_CONFIGURED: busid=%d\033[0m\r\n", busid);
             /* setup first out ep read transfer */
             USB_RequestIdle = 0U;
 
             usbd_ep_start_read(0, DAP_OUT_EP, USB_Request[0], DAP_PACKET_SIZE);
             usbd_ep_start_read(0, CDC_OUT_EP, cdc_tmpbuffer, DAP_PACKET_SIZE);
             usbd_ep_start_read(0, CDC_OUT_EP1, cdc1_tmpbuffer, DAP_PACKET_SIZE);
+#if defined(USE_UART_TTL) && (USE_UART_TTL > 0)
             #ifdef CONFIG_USB485
-            usbd_ep_start_read(0, CDC_OUT_EP2, cdc2_tmpbuffer, DAP_PACKET_SIZE);
+            usbd_ep_start_read(0, CDC_OUT_EP2, cdc_tmpbuffer_ep2_uart_ttl, DAP_PACKET_SIZE);
             #endif
+#endif
             #ifdef CONFIG_SLCAN0
             usbd_ep_start_read(0, CDC_OUT_EP3, slcan0.g_cdc_can_device.read_buffer, usbd_get_ep_mps(busid, CDC_OUT_EP3));
             #endif
@@ -261,8 +282,10 @@ void usbd_event_handler(uint8_t busid, uint8_t event)
             #endif
             break;
         case USBD_EVENT_SET_REMOTE_WAKEUP:
+            //printf("USBD_EVENT_SET_REMOTE_WAKEUP\r\n");
             break;
         case USBD_EVENT_CLR_REMOTE_WAKEUP:
+            //printf("USBD_EVENT_CLR_REMOTE_WAKEUP\r\n");
             break;
 
         default:
@@ -279,30 +302,45 @@ static struct usbd_interface intf5;
 static struct usbd_interface intf6;
 static struct usbd_interface intf7;
 
+#define IS_LINCODING_VALID(plc) (plc->dwDTERate != 0 && plc->bDataBits != 0)
+
 void usbd_cdc_acm_set_line_coding(uint8_t busid, uint8_t intf, struct cdc_line_coding *line_coding)
 {
     (void) busid;
-    if(intf == intf2.intf_num){
+    extern const char *stop_name[];
+    extern const char *parity_name[];
+    if (intf == intf2.intf_num) {
           memcpy((uint8_t *) &g_cdc_lincoding, line_coding, sizeof(struct cdc_line_coding));
-          config_uart = 1;
-          config_uart_transfer = 0;
+          if (IS_LINCODING_VALID(line_coding)) {
+            config_uart = 1;
+            config_uart_transfer = 0;
+            printf("Set 485 line coding(%d); busid=%d; fmt=\033[35m%d;%d%s%s\033[0m\n", intf, busid, line_coding->dwDTERate, line_coding->bDataBits, parity_name[line_coding->bParityType], stop_name[line_coding->bCharFormat]);
+          }
     }
 
-    if(intf == intf4.intf_num){
+    if (intf == intf4.intf_num) {
           memcpy((uint8_t *) &g_cdc1_lincoding, line_coding, sizeof(struct cdc_line_coding));  
-          config_uart_python = 1;
+          if (IS_LINCODING_VALID(line_coding)) {
+            config_uart_python = 1;
+            printf("Set pika line coding(%d); busid=%d; fmt=\033[35m%d;%d%s%s\033[0m\n", intf, busid, line_coding->dwDTERate, line_coding->bDataBits, parity_name[line_coding->bParityType], stop_name[line_coding->bCharFormat]);
+          }
     }
 
+#if defined(USE_UART_TTL) && (USE_UART_TTL > 0)
 #ifdef CONFIG_USB485
-    if(intf == intf6.intf_num){
-      if (memcmp(line_coding, (uint8_t *) &g_cdc2_lincoding, sizeof(struct cdc_line_coding)) != 0) {
-          memcpy((uint8_t *) &g_cdc2_lincoding, line_coding, sizeof(struct cdc_line_coding));
-          config_uart_485 = 1;
-          config_uart_485_transfer = 0;
-          printf("config_uart_485 = %d\r\n",line_coding->dwDTERate);
-      }
+    if (intf == intf6.intf_num) {
+      // if (memcmp(line_coding, (uint8_t *) &g_cdc_lincoding_ep2_uart_ttl, sizeof(struct cdc_line_coding)) != 0) {
+          memcpy((uint8_t *) &g_cdc_lincoding_ep2_uart_ttl, line_coding, sizeof(struct cdc_line_coding));
+          if (IS_LINCODING_VALID(line_coding)) {
+            config_uart_uart_ttl = 1;
+            config_uart_transfer_uart_ttl = 0;
+            // printf("config_uart_485 = %d\r\n",line_coding->dwDTERate);
+            printf("Set ttl line coding(%d); busid=%d; fmt=\033[35m%d;%d%s%s\033[0m\n", intf, busid, line_coding->dwDTERate, line_coding->bDataBits, parity_name[line_coding->bParityType], stop_name[line_coding->bCharFormat]);
+          }
+      // }
     }
 #endif 
+#endif
 
 #ifdef CONFIG_SLCAN0
     if (intf == slcan0.g_cdc_can_device.cdc_device.intf0.intf_num) {
@@ -330,17 +368,19 @@ void usbd_cdc_acm_set_line_coding(uint8_t busid, uint8_t intf, struct cdc_line_c
 void usbd_cdc_acm_get_line_coding(uint8_t busid, uint8_t intf, struct cdc_line_coding *line_coding)
 {
     (void) busid;
-    if(intf == intf2.intf_num){
+    if (intf == intf2.intf_num) {
         memcpy(line_coding, (uint8_t *) &g_cdc_lincoding, sizeof(struct cdc_line_coding));
     }
-    if(intf == intf4.intf_num){
+    if (intf == intf4.intf_num) {
         memcpy(line_coding, (uint8_t *) &g_cdc1_lincoding, sizeof(struct cdc_line_coding));
     }
+#if defined(USE_UART_TTL) && (USE_UART_TTL > 0)
 #ifdef CONFIG_USB485
-    if(intf == intf6.intf_num){
-        memcpy(line_coding, (uint8_t *) &g_cdc2_lincoding, sizeof(struct cdc_line_coding));
+    if (intf == intf6.intf_num) {
+        memcpy(line_coding, (uint8_t *) &g_cdc_lincoding_ep2_uart_ttl, sizeof(struct cdc_line_coding));
     }
 #endif   
+#endif
 #ifdef CONFIG_SLCAN0
     if (intf == slcan0.g_cdc_can_device.cdc_device.intf0.intf_num) {
         slcan0.g_cdc_can_device.cdc_device.is_open = true;
@@ -389,11 +429,13 @@ void USB_Configuration(void)
     usbd_add_endpoint(0, &cdc_out_ep1);
     usbd_add_endpoint(0, &cdc_in_ep1);
 
+#if defined(USE_UART_TTL) && (USE_UART_TTL > 0)
 #ifdef CONFIG_USB485
     usbd_add_interface(0, usbd_cdc_acm_init_intf(0, &intf6));
     usbd_add_interface(0, usbd_cdc_acm_init_intf(0, &intf7));
-    usbd_add_endpoint(0, &cdc_out_ep2);
-    usbd_add_endpoint(0, &cdc_in_ep2);
+    usbd_add_endpoint(0, &cdc_out_ep2_uart_ttl);
+    usbd_add_endpoint(0, &cdc_in_ep2_uart_ttl);
+#endif
 #endif
 
     extern void usbd_event_handler(uint8_t busid, uint8_t event);
