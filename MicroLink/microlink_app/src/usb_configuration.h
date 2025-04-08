@@ -42,8 +42,9 @@
 // 0x0201 | DAPLink-无 MSD，仅有DAP和串口
 // 0x0202 | DAPLink-带CMSIS-DAPv2功能
 // 0x0203 | DAPLink-仅串口和DAP，无MSD
-#define USBD_VID           0x0D28 // 0x34B7//0x0D28
-#define USBD_PID           0x0202 // 0xFFFF//0x0204
+#define USBD_VID           0x0D28
+#define USBD_PID           0x0202
+
 #define USBD_MAX_POWER     500
 #define USBD_LANGID_STRING 1033
 
