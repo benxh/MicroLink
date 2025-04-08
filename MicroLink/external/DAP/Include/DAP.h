@@ -336,12 +336,8 @@ void PIN_DELAY_SLOW (uint32_t delay) {
   );
 }
 __attribute__((always_inline)) static inline void JTAG_PIN_DELAY_SLOW (uint32_t delay) {
-  __asm__ volatile (
-  "1:\n\t"
-    "addi %0, %0, -1\n\t"    // Subtract 1 from delay
-    "bnez %0, 1b\n"          // If delay is not zero, branch to label 1
-  : "+r" (delay)             // Output operand, delay will be modified
-  );
+  volatile uint32_t count = delay;
+  while (--count);
 }
 
 // Fixed delay for fast clock generation
