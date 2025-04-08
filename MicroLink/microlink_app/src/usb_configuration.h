@@ -36,7 +36,7 @@
 
 
 #define USBD_VID           0x0D28
-#define USBD_PID           0x0200
+#define USBD_PID           0x0202
 #define USBD_MAX_POWER     500
 #define USBD_LANGID_STRING 1033
 
